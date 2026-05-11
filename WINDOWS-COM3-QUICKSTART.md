@@ -2,7 +2,13 @@
 
 Use this if your Arduino shows up as the CH340 / USB serial port on `COM3`.
 
-Run these in **PowerShell** from the repo root:
+Fastest option:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows-com3-quickstart.ps1
+```
+
+Manual fallback from the repo root:
 
 ```powershell
 arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
