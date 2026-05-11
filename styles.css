@@ -31,6 +31,9 @@ h1 { margin: 8px 0 8px; font-size: clamp(34px, 5vw, 64px); line-height: .96; let
 .panel { background: var(--panel); border:1px solid var(--border); border-radius: 28px; padding: 22px; box-shadow: var(--shadow); backdrop-filter: blur(16px); }
 .main-panel { grid-row: span 2; }
 .log-panel { grid-column: 1 / -1; }
+.power-block {
+  margin-top: 18px;
+}
 .power-readout { display:flex; justify-content:space-between; align-items:center; gap:16px; margin: 18px 0 20px; }
 .big-number { font-size: clamp(84px, 18vw, 180px); line-height: .9; letter-spacing: -.06em; font-weight: 800; }
 .muted, .finding-card span, .tiny-note, .warning { color: var(--muted); }
@@ -52,6 +55,9 @@ h1 { margin: 8px 0 8px; font-size: clamp(34px, 5vw, 64px); line-height: .96; let
   border-radius: 22px;
   background: rgba(255,255,255,0.035);
   border: 1px solid rgba(255,255,255,0.06);
+}
+.graph-wrap-main {
+  margin-top: 0;
 }
 .graph-head {
   display: flex;

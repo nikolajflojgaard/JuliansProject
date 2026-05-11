@@ -22,32 +22,7 @@
 
       <main class="grid">
         <section class="panel main-panel">
-          <div class="panel-label">Power</div>
-          <div class="power-readout">
-            <div>
-              <div class="big-number" id="pwmValue">0</div>
-              <div class="muted">PWM output</div>
-            </div>
-            <button class="danger-button" id="stopButton">Stop</button>
-          </div>
-
-          <input id="pwmSlider" class="slider" type="range" min="0" max="255" step="1" value="0" />
-
-          <div class="preset-row">
-            <button class="preset" data-pwm="40">40</button>
-            <button class="preset" data-pwm="60">60</button>
-            <button class="preset" data-pwm="75">75</button>
-            <button class="preset" data-pwm="100">100</button>
-            <button class="preset" data-pwm="140">140</button>
-            <button class="preset" data-pwm="255">MAX</button>
-          </div>
-
-          <div class="inline-form">
-            <input id="manualInput" type="number" min="0" max="255" value="0" />
-            <button id="sendManual">Set PWM</button>
-          </div>
-
-          <div class="graph-wrap">
+          <div class="graph-wrap graph-wrap-main">
             <div class="graph-head">
               <div>
                 <div class="panel-label">PWM + process graph</div>
@@ -59,6 +34,33 @@
               </div>
             </div>
             <canvas id="pwmGraph" width="900" height="220"></canvas>
+          </div>
+
+          <div class="power-block">
+            <div class="panel-label">Power</div>
+            <div class="power-readout">
+              <div>
+                <div class="big-number" id="pwmValue">0</div>
+                <div class="muted">PWM output</div>
+              </div>
+              <button class="danger-button" id="stopButton">Stop</button>
+            </div>
+
+            <input id="pwmSlider" class="slider" type="range" min="0" max="255" step="1" value="0" />
+
+            <div class="preset-row">
+              <button class="preset" data-pwm="40">40</button>
+              <button class="preset" data-pwm="60">60</button>
+              <button class="preset" data-pwm="75">75</button>
+              <button class="preset" data-pwm="100">100</button>
+              <button class="preset" data-pwm="140">140</button>
+              <button class="preset" data-pwm="255">MAX</button>
+            </div>
+
+            <div class="inline-form">
+              <input id="manualInput" type="number" min="0" max="255" value="0" />
+              <button id="sendManual">Set PWM</button>
+            </div>
           </div>
         </section>
 
