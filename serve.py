@@ -23,6 +23,7 @@ state = {
     'pwm': 0,
     'targetRPM': 0.0,
     'currentRPM': 0.0,
+    'rawRPM': 0.0,
     'error': 0.0,
     'lastLine': '',
     'lastCommand': '',
@@ -31,7 +32,7 @@ state = {
     'notes': [
         'Sweep result: startup threshold is around PWM 60.',
         '0-50 is mostly dead. 65-80 is low usable. 90-120 is solid.',
-        'RPM feedback is still wrong, so manual mode is the trustworthy path right now.'
+        'Green line is PWM. Orange line is the filtered PID process variable. Raw RPM is exposed separately for debugging.'
     ],
 }
 state_lock = threading.Lock()
@@ -44,8 +45,8 @@ INDEX = (ROOT / 'index.html').read_text()
 APP_JS = (ROOT / 'app.js').read_text()
 STYLES = (ROOT / 'styles.css').read_text()
 
-STATUS_RE = re.compile(r'mode=(?P<mode>[^,]+),\s*targetRPM=(?P<target>[0-9.]+),\s*currentRPM=(?P<current>[0-9.]+),\s*error=(?P<error>-?[0-9.]+),\s*pwm=(?P<pwm>\d+)')
-UPDATE_RE = re.compile(r'UPDATED -> mode:(?P<mode>\w+) T:(?P<target>[0-9.]+).* O:(?P<pwm>\d+)')
+STATUS_RE = re.compile(r'mode=(?P<mode>[^,]+),\s*targetRPM=(?P<target>[0-9.]+),\s*processRPM=(?P<current>[0-9.]+),\s*rawRPM=(?P<raw>[0-9.]+),\s*error=(?P<error>-?[0-9.]+),\s*pwm=(?P<pwm>\d+)')
+UPDATE_RE = re.compile(r'UPDATED -> mode:(?P<mode>\w+) T:(?P<target>[0-9.]+).* R:(?P<ppr>[0-9.]+).* O:(?P<pwm>\d+)')
 
 
 def append_log(line: str):
@@ -64,6 +65,7 @@ def append_log(line: str):
             state['mode'] = m.group('mode')
             state['targetRPM'] = float(m.group('target'))
             state['currentRPM'] = float(m.group('current'))
+            state['rawRPM'] = float(m.group('raw'))
             state['error'] = float(m.group('error'))
             state['pwm'] = int(m.group('pwm'))
             state['connected'] = True

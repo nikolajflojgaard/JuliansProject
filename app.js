@@ -8,6 +8,7 @@ const els = {
   stopButton: document.getElementById('stopButton'),
   targetRpm: document.getElementById('targetRpm'),
   currentRpm: document.getElementById('currentRpm'),
+  rawRpm: document.getElementById('rawRpm'),
   errorValue: document.getElementById('errorValue'),
   lastCommand: document.getElementById('lastCommand'),
   logView: document.getElementById('logView'),
@@ -163,6 +164,7 @@ function render(state) {
   els.manualInput.value = state.pwm;
   els.targetRpm.textContent = Number(state.targetRPM || 0).toFixed(0);
   els.currentRpm.textContent = Number(state.currentRPM || 0).toFixed(0);
+  els.rawRpm.textContent = Number(state.rawRPM || 0).toFixed(0);
   els.errorValue.textContent = Number(state.error || 0).toFixed(0);
   els.lastCommand.textContent = state.lastCommand || '—';
   els.logView.textContent = (state.log || []).slice(-24).join('\n') || 'Waiting for data…';
