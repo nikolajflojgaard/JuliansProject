@@ -196,6 +196,8 @@ There is no exact `lsof` equivalent used in this README, so the practical fix is
 ├── app.js
 ├── index.html
 ├── serve.py
+├── setup-windows.bat
+├── setup-windows.ps1
 ├── styles.css
 └── arduino/
     └── arduino-pid-motor-speed-uno/
@@ -268,6 +270,16 @@ http://127.0.0.1:8744
 
 The localhost server talks to the Arduino over the USB serial port.
 If the browser loads but the motor does not react, the first thing to check is usually the USB serial connection or a busy port.
+
+### Windows bootstrap script files
+
+- `setup-windows.bat` -> normal double-click launcher
+- `setup-windows.ps1` -> actual setup logic
+
+On a Windows machine, the goal is that the user only needs to:
+- get the repo onto the machine
+- plug in the Uno over USB
+- run `setup-windows.bat`
 
 ---
 
@@ -394,6 +406,12 @@ Good next steps if you want to keep building:
 
 ## Quick start
 
+### Fastest Windows path
+
+- plug in the Arduino Uno
+- run `setup-windows.bat`
+- wait for the browser to open
+
 ### macOS quick start
 
 ```bash
@@ -405,7 +423,25 @@ arduino-cli upload -p /dev/cu.usbmodem31201 --fqbn arduino:avr:uno arduino/ardui
 python3 serve.py
 ```
 
-### Windows quick start (PowerShell)
+### Windows one-step setup
+
+If the repo is already on the machine, the intended path is:
+
+1. plug in the Arduino Uno with a USB data cable
+2. double-click `setup-windows.bat`
+
+That launcher will try to:
+- install Python if missing
+- install `arduino-cli` if missing
+- install the Arduino AVR core if missing
+- detect the Uno COM port automatically
+- compile and upload the sketch
+- start the localhost UI
+- open the browser automatically
+
+If something fails, the script should stop with a blunt error instead of pretending it worked.
+
+### Windows manual fallback (PowerShell)
 
 Replace `COM3` below with the real port shown by `arduino-cli board list`.
 
