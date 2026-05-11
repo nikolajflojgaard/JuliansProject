@@ -32,6 +32,43 @@ This repo has two parts:
 
 ---
 
+## Setup sequence diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant PC as Mac or Windows PC
+    participant CLI as arduino-cli
+    participant Uno as Arduino Uno
+    participant UI as Localhost UI
+    participant Browser
+
+    User->>Uno: Connect Uno with USB data cable
+    User->>PC: Open terminal / PowerShell
+    User->>CLI: Run arduino-cli board list
+    CLI-->>User: Show serial port (for example /dev/cu.usbmodem31201 or COM3)
+    User->>CLI: Compile sketch
+    CLI-->>User: Build success
+    User->>CLI: Upload sketch to detected port
+    CLI->>Uno: Flash arduino-pid-motor-speed-uno
+    Uno-->>CLI: Board ready on serial
+    User->>PC: Start python serve.py
+    UI->>CLI: Open serial monitor connection to Uno
+    CLI->>Uno: Connect over detected USB serial port
+    User->>Browser: Open http://127.0.0.1:8744
+    Browser->>UI: Load control page
+    User->>Browser: Move slider / click preset
+    Browser->>UI: Send PWM command
+    UI->>CLI: Write serial command (for example O65)
+    CLI->>Uno: Send command over USB serial
+    Uno-->>CLI: Stream status lines
+    CLI-->>UI: Forward status stream
+    UI-->>Browser: Update graph and status values
+```
+
+---
+
 ## What we found during testing
 
 Manual sweep results on the current setup:
