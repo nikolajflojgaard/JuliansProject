@@ -3,13 +3,16 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 import json
 import os
-import pty
 import re
 import select
 import subprocess
+import sys
 import threading
 import time
 from urllib.parse import urlparse
+
+if os.name != 'nt':
+    import pty
 
 ROOT = Path(__file__).resolve().parent
 HOST = os.environ.get('MOTOR_UI_HOST', '127.0.0.1')
@@ -39,7 +42,10 @@ state_lock = threading.Lock()
 monitor_lock = threading.Lock()
 monitor_proc = None
 monitor_fd = None
+monitor_stdout = None
+monitor_stdin = None
 running = True
+IS_WINDOWS = os.name == 'nt'
 
 INDEX = (ROOT / 'index.html').read_text()
 APP_JS = (ROOT / 'app.js').read_text()
@@ -78,19 +84,35 @@ def append_log(line: str):
 
 
 def start_monitor_locked():
-    global monitor_proc, monitor_fd
-    master_fd, slave_fd = pty.openpty()
-    proc = subprocess.Popen(
-        ['arduino-cli', 'monitor', '-p', SERIAL_PORT, '-c', f'baudrate={BAUD}'],
-        stdin=slave_fd,
-        stdout=slave_fd,
-        stderr=slave_fd,
-        text=False,
-        close_fds=True,
-    )
-    os.close(slave_fd)
-    monitor_proc = proc
-    monitor_fd = master_fd
+    global monitor_proc, monitor_fd, monitor_stdout, monitor_stdin
+    if IS_WINDOWS:
+        proc = subprocess.Popen(
+            ['arduino-cli', 'monitor', '-p', SERIAL_PORT, '-c', f'baudrate={BAUD}'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=False,
+            bufsize=0,
+        )
+        monitor_proc = proc
+        monitor_fd = None
+        monitor_stdout = proc.stdout
+        monitor_stdin = proc.stdin
+    else:
+        master_fd, slave_fd = pty.openpty()
+        proc = subprocess.Popen(
+            ['arduino-cli', 'monitor', '-p', SERIAL_PORT, '-c', f'baudrate={BAUD}'],
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            text=False,
+            close_fds=True,
+        )
+        os.close(slave_fd)
+        monitor_proc = proc
+        monitor_fd = master_fd
+        monitor_stdout = None
+        monitor_stdin = None
     with state_lock:
         state['connected'] = False
         state['lastLine'] = 'Starting monitor…'
@@ -99,8 +121,9 @@ def start_monitor_locked():
 
 def ensure_monitor():
     with monitor_lock:
-        global monitor_proc, monitor_fd
-        dead = monitor_proc is None or monitor_proc.poll() is not None or monitor_fd is None
+        global monitor_proc, monitor_fd, monitor_stdout, monitor_stdin
+        stream_dead = monitor_stdout is None if IS_WINDOWS else monitor_fd is None
+        dead = monitor_proc is None or monitor_proc.poll() is not None or stream_dead
         if dead:
             if monitor_fd is not None:
                 try:
@@ -108,25 +131,45 @@ def ensure_monitor():
                 except OSError:
                     pass
                 monitor_fd = None
+            if monitor_stdout is not None:
+                try:
+                    monitor_stdout.close()
+                except Exception:
+                    pass
+                monitor_stdout = None
+            if monitor_stdin is not None:
+                try:
+                    monitor_stdin.close()
+                except Exception:
+                    pass
+                monitor_stdin = None
             monitor_proc = None
             start_monitor_locked()
-        return monitor_proc, monitor_fd
+        return monitor_proc, (monitor_stdout if IS_WINDOWS else monitor_fd)
 
 
 def monitor_reader():
     buffer = ''
     while running:
-        proc, fd = ensure_monitor()
+        proc, stream = ensure_monitor()
         try:
-            ready, _, _ = select.select([fd], [], [], 0.2)
-            if not ready:
+            if IS_WINDOWS:
                 if proc.poll() is not None:
                     raise OSError('monitor exited')
-                continue
-            chunk = os.read(fd, 4096)
-            if not chunk:
-                time.sleep(0.1)
-                continue
+                chunk = stream.readline() if stream is not None else b''
+                if not chunk:
+                    time.sleep(0.1)
+                    continue
+            else:
+                ready, _, _ = select.select([stream], [], [], 0.2)
+                if not ready:
+                    if proc.poll() is not None:
+                        raise OSError('monitor exited')
+                    continue
+                chunk = os.read(stream, 4096)
+                if not chunk:
+                    time.sleep(0.1)
+                    continue
             buffer += chunk.decode('utf-8', errors='ignore')
             while '\n' in buffer:
                 line, buffer = buffer.split('\n', 1)
@@ -134,7 +177,7 @@ def monitor_reader():
         except Exception as e:
             append_log(f'Monitor restart: {e}')
             with monitor_lock:
-                global monitor_proc, monitor_fd
+                global monitor_proc, monitor_fd, monitor_stdout, monitor_stdin
                 if monitor_proc is not None and monitor_proc.poll() is None:
                     try:
                         monitor_proc.terminate()
@@ -149,19 +192,37 @@ def monitor_reader():
                         os.close(monitor_fd)
                     except OSError:
                         pass
+                if monitor_stdout is not None:
+                    try:
+                        monitor_stdout.close()
+                    except Exception:
+                        pass
+                if monitor_stdin is not None:
+                    try:
+                        monitor_stdin.close()
+                    except Exception:
+                        pass
                 monitor_proc = None
                 monitor_fd = None
+                monitor_stdout = None
+                monitor_stdin = None
             with state_lock:
                 state['connected'] = False
             time.sleep(1.0)
 
 
 def send_command(command: str):
-    _, fd = ensure_monitor()
+    _, stream = ensure_monitor()
     with monitor_lock:
-        if fd is None:
-            raise RuntimeError('Arduino monitor not ready')
-        os.write(fd, f'{command}\n'.encode())
+        if IS_WINDOWS:
+            if monitor_stdin is None:
+                raise RuntimeError('Arduino monitor not ready')
+            monitor_stdin.write(f'{command}\n'.encode())
+            monitor_stdin.flush()
+        else:
+            if stream is None:
+                raise RuntimeError('Arduino monitor not ready')
+            os.write(stream, f'{command}\n'.encode())
     with state_lock:
         state['lastCommand'] = command
         state['lastUpdate'] = time.time()
@@ -262,7 +323,7 @@ def main():
         running = False
         server.server_close()
         with monitor_lock:
-            global monitor_proc, monitor_fd
+            global monitor_proc, monitor_fd, monitor_stdout, monitor_stdin
             if monitor_proc is not None and monitor_proc.poll() is None:
                 try:
                     monitor_proc.terminate()
@@ -278,6 +339,18 @@ def main():
                 except OSError:
                     pass
                 monitor_fd = None
+            if monitor_stdout is not None:
+                try:
+                    monitor_stdout.close()
+                except Exception:
+                    pass
+                monitor_stdout = None
+            if monitor_stdin is not None:
+                try:
+                    monitor_stdin.close()
+                except Exception:
+                    pass
+                monitor_stdin = None
 
 if __name__ == '__main__':
     main()
