@@ -50,12 +50,12 @@
           <div class="graph-wrap">
             <div class="graph-head">
               <div>
-                <div class="panel-label">PWM graph</div>
-                <div class="muted">Live history while you drag up and down</div>
+                <div class="panel-label">PWM + process graph</div>
+                <div class="muted">Green = PWM, orange = reported PID/process variable</div>
               </div>
               <div class="graph-meta">
-                <span>0</span>
-                <span>255</span>
+                <span class="legend-item"><i class="legend-swatch legend-swatch-pwm"></i>PWM</span>
+                <span class="legend-item"><i class="legend-swatch legend-swatch-pid"></i>PID / RPM</span>
               </div>
             </div>
             <canvas id="pwmGraph" width="900" height="220"></canvas>

@@ -6,6 +6,7 @@ It gives you:
 - a local web UI for manual motor control
 - quick PWM presets and a live slider
 - a live PWM history graph while you drag up and down
+- an orange overlay for the reported PID/process variable
 - a serial status tail from the board
 - optional PID-mode commands for later experiments
 - the matching Arduino sketch used for the board

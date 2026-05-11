@@ -18,17 +18,23 @@ const els = {
   pwmGraph: document.getElementById('pwmGraph'),
 };
 
-const pwmHistory = [];
+const history = [];
 const MAX_HISTORY = 90;
 const graph = els.pwmGraph.getContext('2d');
 
-function pushHistory(value, optimistic = false) {
-  const v = Math.max(0, Math.min(255, Number(value) || 0));
-  const now = Date.now();
-  const last = pwmHistory[pwmHistory.length - 1];
-  if (last && Math.abs(last.value - v) < 0.5 && now - last.t < 250 && last.optimistic === optimistic) return;
-  pwmHistory.push({ value: v, t: now, optimistic });
-  while (pwmHistory.length > MAX_HISTORY) pwmHistory.shift();
+function pushHistory({ pwm, pv, optimistic = false }) {
+  const next = {
+    pwm: Math.max(0, Math.min(255, Number(pwm) || 0)),
+    pv: Math.max(0, Number(pv) || 0),
+    t: Date.now(),
+    optimistic,
+  };
+  const last = history[history.length - 1];
+  if (last && Math.abs(last.pwm - next.pwm) < 0.5 && Math.abs(last.pv - next.pv) < 0.5 && next.t - last.t < 250 && last.optimistic === optimistic) {
+    return;
+  }
+  history.push(next);
+  while (history.length > MAX_HISTORY) history.shift();
   drawGraph();
 }
 
@@ -64,33 +70,39 @@ function drawGraph() {
   graph.fillText('255', pad.left, pad.top - 2);
   graph.fillText('0', pad.left, height - 6);
 
-  if (!pwmHistory.length) return;
+  if (!history.length) return;
 
-  const points = pwmHistory.slice(-MAX_HISTORY);
+  const points = history.slice(-MAX_HISTORY);
   const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
-  const yFor = (value) => pad.top + innerH - (value / 255) * innerH;
+  const maxPv = Math.max(1000, ...points.map((point) => point.pv || 0));
+  const yForPwm = (value) => pad.top + innerH - (value / 255) * innerH;
+  const yForPv = (value) => pad.top + innerH - (Math.min(value, maxPv) / maxPv) * innerH;
 
-  const gradient = graph.createLinearGradient(0, pad.top, 0, height - pad.bottom);
-  gradient.addColorStop(0, 'rgba(122,224,180,0.32)');
-  gradient.addColorStop(1, 'rgba(122,224,180,0.02)');
+  graph.fillStyle = 'rgba(255,159,67,0.9)';
+  graph.fillText(String(Math.round(maxPv)), width - pad.right - 42, pad.top - 2);
+  graph.fillText('0', width - pad.right - 10, height - 6);
+
+  const pwmGradient = graph.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  pwmGradient.addColorStop(0, 'rgba(122,224,180,0.32)');
+  pwmGradient.addColorStop(1, 'rgba(122,224,180,0.02)');
 
   graph.beginPath();
   points.forEach((point, index) => {
     const x = pad.left + stepX * index;
-    const y = yFor(point.value);
+    const y = yForPwm(point.pwm);
     if (index === 0) graph.moveTo(x, y);
     else graph.lineTo(x, y);
   });
   graph.lineTo(pad.left + stepX * (points.length - 1), height - pad.bottom);
   graph.lineTo(pad.left, height - pad.bottom);
   graph.closePath();
-  graph.fillStyle = gradient;
+  graph.fillStyle = pwmGradient;
   graph.fill();
 
   graph.beginPath();
   points.forEach((point, index) => {
     const x = pad.left + stepX * index;
-    const y = yFor(point.value);
+    const y = yForPwm(point.pwm);
     if (index === 0) graph.moveTo(x, y);
     else graph.lineTo(x, y);
   });
@@ -98,12 +110,33 @@ function drawGraph() {
   graph.lineWidth = 2.5;
   graph.stroke();
 
+  graph.beginPath();
+  points.forEach((point, index) => {
+    const x = pad.left + stepX * index;
+    const y = yForPv(point.pv);
+    if (index === 0) graph.moveTo(x, y);
+    else graph.lineTo(x, y);
+  });
+  graph.strokeStyle = '#ff9f43';
+  graph.lineWidth = 2;
+  graph.stroke();
+
   const last = points[points.length - 1];
   const lastX = pad.left + stepX * (points.length - 1);
-  const lastY = yFor(last.value);
+  const lastPwmY = yForPwm(last.pwm);
+  const lastPvY = yForPv(last.pv);
+
   graph.beginPath();
-  graph.arc(lastX, lastY, 5, 0, Math.PI * 2);
+  graph.arc(lastX, lastPwmY, 5, 0, Math.PI * 2);
   graph.fillStyle = last.optimistic ? '#ffd166' : '#7ae0b4';
+  graph.fill();
+  graph.strokeStyle = 'rgba(10,13,22,0.9)';
+  graph.lineWidth = 2;
+  graph.stroke();
+
+  graph.beginPath();
+  graph.arc(lastX, lastPvY, 4, 0, Math.PI * 2);
+  graph.fillStyle = '#ff9f43';
   graph.fill();
   graph.strokeStyle = 'rgba(10,13,22,0.9)';
   graph.lineWidth = 2;
@@ -136,7 +169,7 @@ function render(state) {
   const manual = String(state.mode || '').toUpperCase() === 'MANUAL';
   els.manualModeButton.classList.toggle('active', manual);
   els.pidModeButton.classList.toggle('active', !manual);
-  pushHistory(state.pwm, false);
+  pushHistory({ pwm: state.pwm, pv: state.currentRPM, optimistic: false });
 }
 
 async function refresh() {
@@ -163,7 +196,8 @@ function bind() {
     const value = Number(els.pwmSlider.value);
     els.pwmValue.textContent = value;
     els.manualInput.value = value;
-    pushHistory(value, true);
+    const last = history[history.length - 1];
+    pushHistory({ pwm: value, pv: last ? last.pv : 0, optimistic: true });
     clearTimeout(sliderTimer);
     sliderTimer = setTimeout(async () => {
       await post('/api/pwm', { value });
