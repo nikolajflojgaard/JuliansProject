@@ -44,7 +44,7 @@ function drawGraph() {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   const width = Math.max(320, Math.floor(rect.width || canvas.width));
-  const height = Math.max(180, Math.floor(rect.height || canvas.height));
+  const height = Math.max(220, Math.floor(rect.height || canvas.height));
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
   graph.setTransform(1, 0, 0, 1, 0, 0);
@@ -52,96 +52,119 @@ function drawGraph() {
 
   graph.clearRect(0, 0, width, height);
 
-  const pad = { top: 14, right: 12, bottom: 22, left: 12 };
+  const pad = { top: 16, right: 14, bottom: 18, left: 14 };
+  const gap = 16;
   const innerW = width - pad.left - pad.right;
-  const innerH = height - pad.top - pad.bottom;
+  const bandH = (height - pad.top - pad.bottom - gap) / 2;
+  const pwmArea = { top: pad.top, bottom: pad.top + bandH, left: pad.left, right: width - pad.right };
+  const pvArea = { top: pad.top + bandH + gap, bottom: height - pad.bottom, left: pad.left, right: width - pad.right };
 
-  graph.strokeStyle = 'rgba(255,255,255,0.08)';
-  graph.lineWidth = 1;
-  for (let i = 0; i <= 4; i += 1) {
-    const y = pad.top + (innerH / 4) * i;
-    graph.beginPath();
-    graph.moveTo(pad.left, y);
-    graph.lineTo(width - pad.right, y);
-    graph.stroke();
+  const drawBand = (area, label, color, maxLabel) => {
+    const h = area.bottom - area.top;
+    graph.fillStyle = 'rgba(255,255,255,0.025)';
+    graph.fillRect(area.left, area.top, innerW, h);
+
+    graph.strokeStyle = 'rgba(255,255,255,0.08)';
+    graph.lineWidth = 1;
+    for (let i = 0; i <= 3; i += 1) {
+      const y = area.top + (h / 3) * i;
+      graph.beginPath();
+      graph.moveTo(area.left, y);
+      graph.lineTo(area.right, y);
+      graph.stroke();
+    }
+
+    graph.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+    graph.fillStyle = color;
+    graph.fillText(label, area.left + 8, area.top + 13);
+    graph.fillStyle = 'rgba(152,163,190,0.95)';
+    graph.fillText(String(maxLabel), area.right - 40, area.top + 13);
+    graph.fillText('0', area.right - 12, area.bottom - 6);
+  };
+
+  if (!history.length) {
+    drawBand(pwmArea, 'PWM', '#7ae0b4', 255);
+    drawBand(pvArea, 'PID / RPM', '#ff9f43', 1000);
+    return;
   }
-
-  graph.fillStyle = 'rgba(152,163,190,0.9)';
-  graph.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
-  graph.fillText('255', pad.left, pad.top - 2);
-  graph.fillText('0', pad.left, height - 6);
-
-  if (!history.length) return;
 
   const points = history.slice(-MAX_HISTORY);
   const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
   const maxPv = Math.max(1000, ...points.map((point) => point.pv || 0));
-  const yForPwm = (value) => pad.top + innerH - (value / 255) * innerH;
-  const yForPv = (value) => pad.top + innerH - (Math.min(value, maxPv) / maxPv) * innerH;
 
-  graph.fillStyle = 'rgba(255,159,67,0.9)';
-  graph.fillText(String(Math.round(maxPv)), width - pad.right - 42, pad.top - 2);
-  graph.fillText('0', width - pad.right - 10, height - 6);
+  drawBand(pwmArea, 'PWM', '#7ae0b4', 255);
+  drawBand(pvArea, 'PID / RPM', '#ff9f43', Math.round(maxPv));
 
-  const pwmGradient = graph.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  const yForArea = (area, value, maxValue) => {
+    const h = area.bottom - area.top;
+    return area.top + h - (Math.min(value, maxValue) / maxValue) * h;
+  };
+
+  const drawSeries = ({ area, values, maxValue, strokeStyle, lineWidth, fillStyle, pointRadius, optimisticColor }) => {
+    if (!values.length) return;
+
+    if (fillStyle) {
+      graph.beginPath();
+      values.forEach((value, index) => {
+        const x = area.left + stepX * index;
+        const y = yForArea(area, value, maxValue);
+        if (index === 0) graph.moveTo(x, y);
+        else graph.lineTo(x, y);
+      });
+      graph.lineTo(area.left + stepX * (values.length - 1), area.bottom);
+      graph.lineTo(area.left, area.bottom);
+      graph.closePath();
+      graph.fillStyle = fillStyle;
+      graph.fill();
+    }
+
+    graph.beginPath();
+    values.forEach((value, index) => {
+      const x = area.left + stepX * index;
+      const y = yForArea(area, value, maxValue);
+      if (index === 0) graph.moveTo(x, y);
+      else graph.lineTo(x, y);
+    });
+    graph.strokeStyle = strokeStyle;
+    graph.lineWidth = lineWidth;
+    graph.stroke();
+
+    const lastIndex = values.length - 1;
+    const lastX = area.left + stepX * lastIndex;
+    const lastY = yForArea(area, values[lastIndex], maxValue);
+    graph.beginPath();
+    graph.arc(lastX, lastY, pointRadius, 0, Math.PI * 2);
+    graph.fillStyle = optimisticColor || strokeStyle;
+    graph.fill();
+    graph.strokeStyle = 'rgba(10,13,22,0.9)';
+    graph.lineWidth = 2;
+    graph.stroke();
+  };
+
+  const pwmGradient = graph.createLinearGradient(0, pwmArea.top, 0, pwmArea.bottom);
   pwmGradient.addColorStop(0, 'rgba(122,224,180,0.32)');
-  pwmGradient.addColorStop(1, 'rgba(122,224,180,0.02)');
+  pwmGradient.addColorStop(1, 'rgba(122,224,180,0.03)');
 
-  graph.beginPath();
-  points.forEach((point, index) => {
-    const x = pad.left + stepX * index;
-    const y = yForPwm(point.pwm);
-    if (index === 0) graph.moveTo(x, y);
-    else graph.lineTo(x, y);
+  drawSeries({
+    area: pwmArea,
+    values: points.map((point) => point.pwm),
+    maxValue: 255,
+    strokeStyle: '#7ae0b4',
+    lineWidth: 2.5,
+    fillStyle: pwmGradient,
+    pointRadius: 5,
+    optimisticColor: points[points.length - 1].optimistic ? '#ffd166' : '#7ae0b4',
   });
-  graph.lineTo(pad.left + stepX * (points.length - 1), height - pad.bottom);
-  graph.lineTo(pad.left, height - pad.bottom);
-  graph.closePath();
-  graph.fillStyle = pwmGradient;
-  graph.fill();
 
-  graph.beginPath();
-  points.forEach((point, index) => {
-    const x = pad.left + stepX * index;
-    const y = yForPwm(point.pwm);
-    if (index === 0) graph.moveTo(x, y);
-    else graph.lineTo(x, y);
+  drawSeries({
+    area: pvArea,
+    values: points.map((point) => point.pv),
+    maxValue: maxPv,
+    strokeStyle: '#ff9f43',
+    lineWidth: 2,
+    fillStyle: null,
+    pointRadius: 4,
   });
-  graph.strokeStyle = '#7ae0b4';
-  graph.lineWidth = 2.5;
-  graph.stroke();
-
-  graph.beginPath();
-  points.forEach((point, index) => {
-    const x = pad.left + stepX * index;
-    const y = yForPv(point.pv);
-    if (index === 0) graph.moveTo(x, y);
-    else graph.lineTo(x, y);
-  });
-  graph.strokeStyle = '#ff9f43';
-  graph.lineWidth = 2;
-  graph.stroke();
-
-  const last = points[points.length - 1];
-  const lastX = pad.left + stepX * (points.length - 1);
-  const lastPwmY = yForPwm(last.pwm);
-  const lastPvY = yForPv(last.pv);
-
-  graph.beginPath();
-  graph.arc(lastX, lastPwmY, 5, 0, Math.PI * 2);
-  graph.fillStyle = last.optimistic ? '#ffd166' : '#7ae0b4';
-  graph.fill();
-  graph.strokeStyle = 'rgba(10,13,22,0.9)';
-  graph.lineWidth = 2;
-  graph.stroke();
-
-  graph.beginPath();
-  graph.arc(lastX, lastPvY, 4, 0, Math.PI * 2);
-  graph.fillStyle = '#ff9f43';
-  graph.fill();
-  graph.strokeStyle = 'rgba(10,13,22,0.9)';
-  graph.lineWidth = 2;
-  graph.stroke();
 }
 
 async function post(path, body = {}) {
