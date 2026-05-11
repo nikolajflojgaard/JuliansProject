@@ -275,6 +275,7 @@ If the browser loads but the motor does not react, the first thing to check is u
 
 - `setup-windows.bat` -> normal double-click launcher
 - `setup-windows.ps1` -> actual setup logic
+- `logs/windows-ui.log` -> localhost UI log after Windows bootstrap runs
 
 On a Windows machine, the goal is that the user only needs to:
 - get the repo onto the machine
@@ -437,9 +438,11 @@ That launcher will try to:
 - detect the Uno COM port automatically
 - compile and upload the sketch
 - start the localhost UI
+- wait for localhost to actually respond
 - open the browser automatically
 
 If something fails, the script should stop with a blunt error instead of pretending it worked.
+If the UI process starts but does not come online in time, the script points you to a Windows log file under `logs/windows-ui.log`.
 
 ### Windows manual fallback (PowerShell)
 

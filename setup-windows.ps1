@@ -5,6 +5,8 @@ $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SketchPath = Join-Path $RepoRoot 'arduino\arduino-pid-motor-speed-uno'
 $UiScript = Join-Path $RepoRoot 'serve.py'
 $UiUrl = 'http://127.0.0.1:8744'
+$LogDir = Join-Path $RepoRoot 'logs'
+$UiLogPath = Join-Path $LogDir 'windows-ui.log'
 
 function Write-Step($Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -77,11 +79,9 @@ function Ensure-Python {
     throw 'Python installation did not become available in this shell. Re-open PowerShell and run setup-windows.bat again.'
 }
 
-function Invoke-Python($PythonInfo, [string[]]$Arguments) {
-    if ($PythonInfo.Kind -eq 'py') {
-        & $PythonInfo.Path -3 @Arguments
-    } else {
-        & $PythonInfo.Path @Arguments
+function Ensure-LogDir {
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir | Out-Null
     }
 }
 
@@ -127,8 +127,27 @@ function Upload-Sketch($ArduinoCliPath, $Port) {
     & $ArduinoCliPath upload -p $Port --fqbn arduino:avr:uno $SketchPath | Out-Host
 }
 
+function Test-UiReady {
+    try {
+        $response = Invoke-WebRequest -Uri $UiUrl -UseBasicParsing -TimeoutSec 2
+        return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+    } catch {
+        return $false
+    }
+}
+
+function Wait-ForUi {
+    Write-Step 'Waiting for localhost UI to come online'
+    for ($i = 0; $i -lt 30; $i++) {
+        if (Test-UiReady) { return $true }
+        Start-Sleep -Milliseconds 700
+    }
+    return $false
+}
+
 function Start-Ui($PythonInfo, $Port) {
     Write-Step 'Starting localhost UI'
+    Ensure-LogDir
 
     $pythonExecutable = $PythonInfo.Path
     $pythonArgs = if ($PythonInfo.Kind -eq 'py') { '-3 serve.py' } else { 'serve.py' }
@@ -139,7 +158,7 @@ function Start-Ui($PythonInfo, $Port) {
         '$env:MOTOR_UI_PORT="8744"',
         '$env:MOTOR_UI_BAUD="115200"',
         'Set-Location "' + $RepoRoot + '"',
-        '& "' + $pythonExecutable + '" ' + $pythonArgs
+        '& "' + $pythonExecutable + '" ' + $pythonArgs + ' *>> "' + $UiLogPath + '"'
     ) -join '; '
 
     Start-Process powershell -ArgumentList '-NoExit', '-ExecutionPolicy', 'Bypass', '-Command', $command | Out-Null
@@ -159,8 +178,14 @@ Ensure-ArduinoCore $arduinoCliPath
 $port = Get-UnoPort $arduinoCliPath
 Upload-Sketch $arduinoCliPath $port
 Start-Ui $pythonInfo $port
-Open-Browser
 
-Write-Host "`nDone. The UI should open at $UiUrl" -ForegroundColor Green
+if (Wait-ForUi) {
+    Open-Browser
+    Write-Host "`nDone. The UI should open at $UiUrl" -ForegroundColor Green
+} else {
+    Write-Host "`nThe UI process was started, but localhost did not respond in time." -ForegroundColor Yellow
+    Write-Host "Check the log here: $UiLogPath" -ForegroundColor Yellow
+}
+
 Write-Host "Detected board port: $port" -ForegroundColor Green
 Write-Host 'If the browser opens but the motor does not respond, close other serial tools and run the script again.' -ForegroundColor Yellow
