@@ -5,6 +5,7 @@ A blunt little localhost control panel for an **Arduino Uno motor setup**.
 It gives you:
 - a local web UI for manual motor control
 - quick PWM presets and a live slider
+- a live PWM history graph while you drag up and down
 - a serial status tail from the board
 - optional PID-mode commands for later experiments
 - the matching Arduino sketch used for the board
