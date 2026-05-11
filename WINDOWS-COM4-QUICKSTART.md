@@ -5,7 +5,7 @@ Use this if your Arduino shows up as the CH340 / USB serial port on `COM4`.
 Fastest option:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows-com3-quickstart.ps1
+powershell -ExecutionPolicy Bypass -File .\windows-com4-quickstart.ps1
 ```
 
 Manual fallback from the repo root:
