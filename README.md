@@ -51,7 +51,8 @@ Important: the reported RPM values are still garbage on the current sensor setup
 ### macOS
 - Python 3
 - [`arduino-cli`](https://arduino.github.io/arduino-cli/latest/)
-- an Arduino Uno connected over USB
+- an Arduino Uno
+- a USB cable that actually carries data (not charge-only)
 
 ### Arduino CLI check
 
@@ -60,11 +61,77 @@ arduino-cli version
 arduino-cli board list
 ```
 
-If your Uno is connected, `arduino-cli board list` should show something like:
+If your Uno is connected properly, `arduino-cli board list` should show something like:
 
 ```bash
 /dev/cu.usbmodem31201 Arduino UNO arduino:avr:uno
 ```
+
+---
+
+## Physical connection: USB + board
+
+This part needs to be right or localhost will never talk to the board.
+
+### 1. Plug in the Arduino Uno over USB
+
+Use a real USB data cable.
+A charge-only cable will power the board but **will not** create a usable serial port.
+
+### 2. Confirm macOS can see the board
+
+Run:
+
+```bash
+arduino-cli board list
+```
+
+You want to see a real serial device, usually something like:
+
+```bash
+/dev/cu.usbmodem31201 Arduino UNO arduino:avr:uno
+```
+
+What matters is the **serial port path**, for example:
+
+```bash
+/dev/cu.usbmodem31201
+```
+
+That is the port the localhost UI will use.
+
+### 3. If you do not see the board
+
+Check these in order:
+
+- unplug and reconnect the USB cable
+- try another USB cable
+- try another USB port on the Mac
+- confirm the board powers on
+- run again:
+
+```bash
+arduino-cli board list
+```
+
+If there is still no `/dev/cu.usbmodem...` device, the problem is below the app layer.
+
+### 4. Do not let another serial tool hold the port open
+
+Only one thing should own the serial port at a time.
+
+Before running the localhost UI, close:
+- Arduino IDE Serial Monitor
+- other `arduino-cli monitor` sessions
+- terminal tools like `screen`, `cu`, etc.
+
+If needed, check who owns the port:
+
+```bash
+lsof -nP | grep usbmodem
+```
+
+If the port is busy, the UI may load in the browser but it will not control the motor.
 
 ---
 
@@ -92,6 +159,13 @@ Find your board first:
 arduino-cli board list
 ```
 
+Use the port shown there.
+Example:
+
+```bash
+/dev/cu.usbmodem31201
+```
+
 Compile:
 
 ```bash
@@ -104,11 +178,17 @@ Upload:
 arduino-cli upload -p /dev/cu.usbmodem31201 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 ```
 
-Replace the serial port if your machine shows a different one.
+Replace `/dev/cu.usbmodem31201` with the actual port from your machine if it is different.
 
 ---
 
 ## 2. Run the localhost UI
+
+Before starting the localhost UI:
+
+- make sure the Arduino is still plugged in
+- make sure no other serial monitor owns the board
+- make sure the board was flashed successfully
 
 From the repo root:
 
@@ -121,6 +201,9 @@ Then open:
 ```text
 http://127.0.0.1:8744
 ```
+
+The localhost server talks to the Arduino over the USB serial port.
+If the browser loads but the motor does not react, the first thing to check is usually the USB serial connection or a busy port.
 
 ---
 
@@ -229,6 +312,9 @@ If you just want it running fast:
 ```bash
 git clone <YOUR-REPO-URL>
 cd JuliansProject
+arduino-cli board list
+arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
+arduino-cli upload -p /dev/cu.usbmodem31201 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 python3 serve.py
 ```
 
@@ -243,3 +329,9 @@ Then try:
 - **75**
 - **100**
 - **Stop**
+
+If it does not respond, re-check the USB port shown by:
+
+```bash
+arduino-cli board list
+```
