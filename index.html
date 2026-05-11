@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Motor Control</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Arduino motor control</div>
+          <h1>Drive it without fighting the terminal.</h1>
+          <p class="hero-copy">Manual-first control panel for the Uno on pin 3. Clean enough to use, blunt enough to trust.</p>
+        </div>
+        <div class="hero-badges">
+          <div class="badge" id="connectionBadge">Connecting…</div>
+          <div class="badge badge-accent" id="modeBadge">Mode: --</div>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel main-panel">
+          <div class="panel-label">Power</div>
+          <div class="power-readout">
+            <div>
+              <div class="big-number" id="pwmValue">0</div>
+              <div class="muted">PWM output</div>
+            </div>
+            <button class="danger-button" id="stopButton">Stop</button>
+          </div>
+
+          <input id="pwmSlider" class="slider" type="range" min="0" max="255" step="1" value="0" />
+
+          <div class="preset-row">
+            <button class="preset" data-pwm="40">40</button>
+            <button class="preset" data-pwm="60">60</button>
+            <button class="preset" data-pwm="75">75</button>
+            <button class="preset" data-pwm="100">100</button>
+            <button class="preset" data-pwm="140">140</button>
+            <button class="preset" data-pwm="255">MAX</button>
+          </div>
+
+          <div class="inline-form">
+            <input id="manualInput" type="number" min="0" max="255" value="0" />
+            <button id="sendManual">Set PWM</button>
+          </div>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="panel-label">What we learned</div>
+          <div class="finding-card finding-card-good">Startup threshold is around <strong>PWM 60</strong>.</div>
+          <div class="finding-grid">
+            <div class="finding-card">0–50<br /><span>mostly dead</span></div>
+            <div class="finding-card">65–80<br /><span>low usable</span></div>
+            <div class="finding-card">90–120<br /><span>solid range</span></div>
+            <div class="finding-card">150–255<br /><span>high / near max</span></div>
+          </div>
+          <div class="warning">RPM feedback is still lying, so manual mode is the only honest mode right now.</div>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="panel-label">Status</div>
+          <div class="stat-list">
+            <div class="stat-row"><span>Target RPM</span><strong id="targetRpm">0</strong></div>
+            <div class="stat-row"><span>Reported RPM</span><strong id="currentRpm">0</strong></div>
+            <div class="stat-row"><span>Error</span><strong id="errorValue">0</strong></div>
+            <div class="stat-row"><span>Last command</span><strong id="lastCommand">—</strong></div>
+          </div>
+          <div class="tiny-note">If you insist, PID mode is still there. I just don’t trust it yet.</div>
+          <div class="mode-row">
+            <button id="manualModeButton" class="mode-button active">Manual</button>
+            <button id="pidModeButton" class="mode-button">PID</button>
+          </div>
+          <div class="inline-form">
+            <input id="rpmInput" type="number" min="0" max="5000" value="60" />
+            <button id="sendRpm">Set RPM</button>
+          </div>
+        </section>
+
+        <section class="panel log-panel">
+          <div class="panel-label">Live serial tail</div>
+          <pre id="logView">Waiting for data…</pre>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
