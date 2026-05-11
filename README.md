@@ -141,10 +141,18 @@ You want to see a real serial device.
 COM3 Arduino UNO arduino:avr:uno
 ```
 
+Also acceptable on clone boards:
+```text
+COM3 Serial Unknown
+```
+
 What matters is the **serial port**:
 
 - macOS: `/dev/cu.usbmodem31201`
 - Windows: `COM3`
+
+On Windows clone boards, `arduino-cli` may show something generic like `COM3 serial unknown`.
+That is still usable.
 
 That is the port the localhost UI will use.
 
@@ -436,6 +444,7 @@ That launcher will try to:
 - install `arduino-cli` if missing
 - install the Arduino AVR core if missing
 - detect the Uno COM port automatically
+- fall back to a single generic COM port like `COM3 serial unknown` on clone boards
 - compile and upload the sketch
 - start the localhost UI
 - wait for localhost to actually respond
@@ -447,6 +456,7 @@ If the UI process starts but does not come online in time, the script points you
 ### Windows manual fallback (PowerShell)
 
 Replace `COM3` below with the real port shown by `arduino-cli board list`.
+If Windows shows `COM3 serial unknown`, that still counts as valid.
 
 ```powershell
 git clone <YOUR-REPO-URL>

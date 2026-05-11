@@ -98,6 +98,8 @@ function Get-UnoPort($ArduinoCliPath) {
     Write-Step 'Detecting Arduino Uno USB port'
     $boardList = & $ArduinoCliPath board list
     $lines = $boardList -split "`r?`n"
+    $genericPorts = @()
+
     foreach ($line in $lines) {
         if ($line -match '^(COM\d+)\s+.*arduino:avr:uno') {
             return $matches[1]
@@ -105,17 +107,41 @@ function Get-UnoPort($ArduinoCliPath) {
         if ($line -match '^(COM\d+)\s+.*Arduino\s+UNO') {
             return $matches[1]
         }
+        if ($line -match '^(COM\d+)\b') {
+            $genericPorts += $matches[1]
+        }
+    }
+
+    $genericPorts = $genericPorts | Select-Object -Unique
+    if ($genericPorts.Count -eq 1) {
+        Write-Host "Falling back to generic serial port detection: $($genericPorts[0])" -ForegroundColor Yellow
+        Write-Host 'This usually means Windows sees a clone board or generic USB serial chip, which is fine.' -ForegroundColor Yellow
+        return $genericPorts[0]
+    }
+
+    if ($genericPorts.Count -gt 1) {
+        throw @"
+Found multiple COM ports but could not identify which one is the Arduino Uno.
+
+Visible COM ports:
+$($genericPorts -join ", ")
+
+Unplug the board, run `arduino-cli board list`, plug it back in, then run the script again.
+That usually makes the new COM port obvious.
+"@
     }
 
     throw @"
-Could not find an Arduino Uno COM port.
+Could not find any usable COM port for the Arduino.
 
 Make sure:
 - the Uno is plugged in with a real USB data cable
 - the board powers on
+- Windows has created a COM port for it
 - no other serial monitor is holding the port open
 
-Then run this again.
+If `arduino-cli board list` shows something like `COM3 serial unknown`, this script now accepts that.
+If nothing COM-like appears at all, this is still a cable/driver/device problem.
 "@
 }
 
