@@ -48,7 +48,7 @@ Important: the reported RPM values are still garbage on the current sensor setup
 
 ## Requirements
 
-### macOS
+### macOS or Windows
 - Python 3
 - [`arduino-cli`](https://arduino.github.io/arduino-cli/latest/)
 - an Arduino Uno
@@ -63,8 +63,14 @@ arduino-cli board list
 
 If your Uno is connected properly, `arduino-cli board list` should show something like:
 
+**macOS:**
 ```bash
 /dev/cu.usbmodem31201 Arduino UNO arduino:avr:uno
+```
+
+**Windows:**
+```text
+COM3 Arduino UNO arduino:avr:uno
 ```
 
 ---
@@ -78,7 +84,7 @@ This part needs to be right or localhost will never talk to the board.
 Use a real USB data cable.
 A charge-only cable will power the board but **will not** create a usable serial port.
 
-### 2. Confirm macOS can see the board
+### 2. Confirm your computer can see the board
 
 Run:
 
@@ -86,17 +92,22 @@ Run:
 arduino-cli board list
 ```
 
-You want to see a real serial device, usually something like:
+You want to see a real serial device.
 
+**macOS example:**
 ```bash
 /dev/cu.usbmodem31201 Arduino UNO arduino:avr:uno
 ```
 
-What matters is the **serial port path**, for example:
-
-```bash
-/dev/cu.usbmodem31201
+**Windows example:**
+```text
+COM3 Arduino UNO arduino:avr:uno
 ```
+
+What matters is the **serial port**:
+
+- macOS: `/dev/cu.usbmodem31201`
+- Windows: `COM3`
 
 That is the port the localhost UI will use.
 
@@ -106,7 +117,7 @@ Check these in order:
 
 - unplug and reconnect the USB cable
 - try another USB cable
-- try another USB port on the Mac
+- try another USB port on the computer
 - confirm the board powers on
 - run again:
 
@@ -114,7 +125,7 @@ Check these in order:
 arduino-cli board list
 ```
 
-If there is still no `/dev/cu.usbmodem...` device, the problem is below the app layer.
+If there is still no usable serial port, the problem is below the app layer.
 
 ### 4. Do not let another serial tool hold the port open
 
@@ -125,13 +136,18 @@ Before running the localhost UI, close:
 - other `arduino-cli monitor` sessions
 - terminal tools like `screen`, `cu`, etc.
 
-If needed, check who owns the port:
+If the port is busy, the UI may load in the browser but it will not control the motor.
 
+**macOS check:**
 ```bash
 lsof -nP | grep usbmodem
 ```
 
-If the port is busy, the UI may load in the browser but it will not control the motor.
+**Windows PowerShell check:**
+There is no exact `lsof` equivalent used in this README, so the practical fix is:
+- close Arduino IDE Serial Monitor
+- close extra terminals running Arduino tools
+- unplug/replug the board if needed
 
 ---
 
@@ -160,10 +176,15 @@ arduino-cli board list
 ```
 
 Use the port shown there.
-Example:
 
+**macOS example:**
 ```bash
 /dev/cu.usbmodem31201
+```
+
+**Windows example:**
+```text
+COM3
 ```
 
 Compile:
@@ -172,13 +193,19 @@ Compile:
 arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 ```
 
-Upload:
+Upload on macOS:
 
 ```bash
 arduino-cli upload -p /dev/cu.usbmodem31201 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 ```
 
-Replace `/dev/cu.usbmodem31201` with the actual port from your machine if it is different.
+Upload on Windows:
+
+```powershell
+arduino-cli upload -p COM3 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
+```
+
+Replace the example port with the actual port from your machine.
 
 ---
 
@@ -209,7 +236,9 @@ If the browser loads but the motor does not react, the first thing to check is u
 
 ## Optional environment variables
 
-You can override the defaults if your port or host is different:
+You can override the defaults if your port or host is different.
+
+### macOS / bash / zsh
 
 ```bash
 MOTOR_UI_HOST=127.0.0.1 \
@@ -217,6 +246,16 @@ MOTOR_UI_PORT=8744 \
 MOTOR_UI_SERIAL_PORT=/dev/cu.usbmodem31201 \
 MOTOR_UI_BAUD=115200 \
 python3 serve.py
+```
+
+### Windows PowerShell
+
+```powershell
+$env:MOTOR_UI_HOST = "127.0.0.1"
+$env:MOTOR_UI_PORT = "8744"
+$env:MOTOR_UI_SERIAL_PORT = "COM3"
+$env:MOTOR_UI_BAUD = "115200"
+python serve.py
 ```
 
 ---
@@ -272,15 +311,26 @@ Usually one of these:
 3. another serial monitor already owns the port
 4. motor driver wiring is wrong
 
-Check port ownership:
-
+**macOS:**
 ```bash
 lsof -nP | grep usbmodem
 ```
 
-### `Resource busy`
+**Windows:**
+- close Arduino IDE Serial Monitor
+- close any terminal running `arduino-cli monitor`
+- unplug/replug the board
+- confirm the COM port again with:
+
+```powershell
+arduino-cli board list
+```
+
+### `Resource busy` or serial port cannot open
 Something else already has the serial port open.
 Close other terminal monitors or Arduino Serial Monitor first.
+
+On Windows, this usually means another app is already using `COM3` / `COM4` / similar.
 
 ### Motor does not start at low PWM
 That is expected on this setup.
@@ -307,7 +357,7 @@ Good next steps if you want to keep building:
 
 ## Quick start
 
-If you just want it running fast:
+### macOS quick start
 
 ```bash
 git clone <YOUR-REPO-URL>
@@ -316,6 +366,19 @@ arduino-cli board list
 arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 arduino-cli upload -p /dev/cu.usbmodem31201 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 python3 serve.py
+```
+
+### Windows quick start (PowerShell)
+
+Replace `COM3` below with the real port shown by `arduino-cli board list`.
+
+```powershell
+git clone <YOUR-REPO-URL>
+cd JuliansProject
+arduino-cli board list
+arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
+arduino-cli upload -p COM3 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
+python serve.py
 ```
 
 Open:
@@ -330,7 +393,7 @@ Then try:
 - **100**
 - **Stop**
 
-If it does not respond, re-check the USB port shown by:
+If it does not respond, re-check the board port shown by:
 
 ```bash
 arduino-cli board list
