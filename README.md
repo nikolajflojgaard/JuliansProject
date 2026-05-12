@@ -33,6 +33,64 @@ This repo has two parts:
 
 ---
 
+## Pseudocode first: what the project is trying to do
+
+Before reading the real code, it helps to describe the system like a plan.
+
+### Whole-system pseudocode
+
+```text
+START project
+  connect Arduino to computer over USB
+  upload motor-control sketch to Arduino
+  start localhost UI on computer
+
+  LOOP while project is running
+    user changes PWM or mode in browser
+    UI sends serial command to Arduino
+    Arduino reads command
+    Arduino updates motor output
+    sensor reports pulses back to Arduino
+    Arduino estimates current speed
+    Arduino sends status back to UI
+    UI updates graph and status text
+  END LOOP
+END project
+```
+
+### Arduino control-loop pseudocode
+
+```text
+SETUP
+  start serial communication
+  configure pins
+  enable motor driver
+  attach interrupt for pulse counting
+  start in manual mode with motor stopped
+
+REPEAT forever
+  read any new serial command
+  wait until next control interval
+  copy latest pulse data safely
+  estimate RPM from pulse timing and pulse count
+  smooth the RPM value
+
+  IF manual mode
+    use the human-chosen PWM value
+  ELSE
+    calculate PID output from target RPM and measured RPM
+  END IF
+
+  write PWM to motor
+  print current status back to computer
+END REPEAT
+```
+
+That is the real design in plain English.
+The actual `.ino` file is just the more exact version of that idea.
+
+---
+
 ## Setup sequence diagram
 
 ```mermaid

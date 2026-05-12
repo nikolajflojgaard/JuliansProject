@@ -48,6 +48,90 @@ This is the whole system in one picture:
 
 ---
 
+## Pseudocode first: explain the idea before the code
+
+Before looking at the real `.ino` file, it helps to explain the logic as **pseudo code**.
+
+Pseudo code means:
+
+- write the steps in normal human language
+- keep the order correct
+- ignore the fussy syntax for a moment
+
+That way you understand the **job** of the program before you stare at the exact code.
+
+### Whole-program pseudo code
+
+```text
+START
+  prepare serial communication
+  set up motor pins
+  set up sensor pin
+  attach interrupt so pulses are counted immediately
+  start with motor stopped in manual mode
+
+  REPEAT forever
+    read any new command from the computer
+
+    IF enough time has passed for the next control update
+      copy the latest pulse information safely
+      estimate motor speed from pulse timing and pulse count
+      smooth the speed reading
+      compare actual speed with target speed
+
+      IF manual mode is on
+        use the human-chosen PWM value
+      ELSE
+        calculate a PID output
+      END IF
+
+      send PWM to the motor
+      print status back to the computer
+    END IF
+  END REPEAT
+END
+```
+
+### Pulse interrupt pseudo code
+
+```text
+WHEN sensor pulse arrives
+  check current time
+  reject pulse if it arrived impossibly fast
+  save time since previous good pulse
+  increase pulse counter
+END
+```
+
+### Serial command pseudo code
+
+```text
+WHEN a serial command arrives
+  read the first letter
+  read the number after it
+
+  IF command is target RPM
+    update targetRPM
+  IF command is P, I, or D
+    update PID tuning value
+  IF command is pulses-per-revolution
+    update sensor scaling
+  IF command is manual PWM output
+    update manualPWM
+    IF manual mode is active
+      send that PWM to the motor now
+  IF command is mode switch
+    change between manual mode and PID mode
+
+  print updated settings back to the computer
+END
+```
+
+That is the skeleton of the whole sketch.
+Now the real code will make much more sense.
+
+---
+
 ## The pins: the Arduino's little fingers
 
 At the top of the file, the code picks which pins do which jobs.
