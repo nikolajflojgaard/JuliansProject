@@ -1,16 +1,23 @@
-# Windows COM4 quick start
+# Windows quick start
 
-Use this if your Arduino shows up as the CH340 / USB serial port on `COM4`.
+Use this if your Arduino shows up as a USB serial port on Windows.
 
 Fastest option:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows-com4-quickstart.ps1
+powershell -ExecutionPolicy Bypass -File .\windows-quickstart.ps1
+```
+
+If you want to force a specific port:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows-quickstart.ps1 -Port COM4
 ```
 
 Manual fallback from the repo root:
 
 ```powershell
+arduino-cli board list
 arduino-cli compile --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 arduino-cli upload -p COM4 --fqbn arduino:avr:uno arduino/arduino-pid-motor-speed-uno
 $env:MOTOR_UI_SERIAL_PORT="COM4"
@@ -23,6 +30,11 @@ Then open:
 http://127.0.0.1:8744
 ```
 
+## Notes
+
+- The script auto-detects the Arduino port when possible.
+- If auto-detection picks the wrong port, pass `-Port COMx` explicitly.
+
 ## If upload fails
 
 Close anything that may already own the port:
@@ -32,13 +44,3 @@ Close anything that may already own the port:
 - any `arduino-cli monitor` session
 
 Then unplug/replug the board and try again.
-
-## If COM4 changes
-
-Check the port again with:
-
-```powershell
-arduino-cli board list
-```
-
-If it shows a different port, replace `COM4` in the commands above.
