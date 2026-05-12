@@ -28,6 +28,24 @@ So the Arduino is like a tiny robot boss saying:
 - “What power should I send to the motor?”
 - “How fast am I actually spinning?”
 
+### Big picture flow
+
+```mermaid
+flowchart LR
+    PC[Computer or UI] -->|serial commands| UNO[Arduino Uno]
+    UNO -->|PWM power| MOTOR[Motor]
+    MOTOR -->|spins| SENSOR[Speed sensor]
+    SENSOR -->|pulses| UNO
+    UNO -->|status lines| PC
+```
+
+This is the whole system in one picture:
+
+- the computer sends commands
+- the Arduino drives the motor
+- the sensor reports movement back to the Arduino
+- the Arduino sends status back to the computer
+
 ---
 
 ## The pins: the Arduino's little fingers
@@ -322,6 +340,22 @@ This is basically the Arduino hearing little text instructions like:
 
 After changing something, it prints back an update so the computer knows the new settings.
 
+### Serial command path
+
+```mermaid
+sequenceDiagram
+    participant UI as Computer or UI
+    participant Arduino as Arduino
+
+    UI->>Arduino: Send text command like O120 or M0
+    Arduino->>Arduino: Read first letter
+    Arduino->>Arduino: Read number part
+    Arduino->>Arduino: Update matching setting
+    Arduino-->>UI: Print UPDATED status line
+```
+
+That is the tiny command conversation.
+
 ---
 
 ## `setup()` = the getting-ready part
@@ -384,6 +418,28 @@ This helps the computer or user know the board is alive.
 After `setup()` runs once, `loop()` runs again and again and again forever.
 
 This is the heart of the program.
+
+### Main loop flow
+
+```mermaid
+flowchart TD
+    A[Start loop] --> B[Read serial commands]
+    B --> C{100 ms passed?}
+    C -- No --> Z[Return and try again]
+    C -- Yes --> D[Copy pulse data safely]
+    D --> E[Estimate raw RPM]
+    E --> F[Smooth into processRPM]
+    F --> G[Calculate error to targetRPM]
+    G --> H{Manual mode?}
+    H -- Yes --> I[Use manual PWM]
+    H -- No --> J[Calculate PID output]
+    I --> K[Write motor PWM]
+    J --> K
+    K --> L[Print status]
+    L --> A
+```
+
+That is the repeating control cycle.
 
 ---
 
