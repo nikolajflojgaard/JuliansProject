@@ -10,7 +10,7 @@ It gives you:
 - a serial status tail from the board
 - optional PID-mode commands for later experiments
 - the matching Arduino sketch used for the board
-- a kid-friendly code walkthrough in `code-documentation.md`
+- a plain-English code walkthrough in `code-documentation.md`
 
 Right now the honest working mode is **manual PWM control**.
 The RPM sensor path is still noisy, so closed-loop RPM control is included for experimentation, not trust.
@@ -222,7 +222,7 @@ There is no exact `lsof` equivalent used in this README, so the practical fix is
 
 - `README.md` -> setup, usage, and troubleshooting
 - `WINDOWS-QUICKSTART.md` -> fast Windows path
-- `code-documentation.md` -> explains the Arduino `.ino` file in simple, kid-friendly language
+- `code-documentation.md` -> explains the Arduino `.ino` file in simple language
 
 ## 1. Flash the Arduino sketch
 

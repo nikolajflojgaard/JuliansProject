@@ -1,6 +1,6 @@
 # Code documentation
 
-This file explains the Arduino code like you are 10 years old.
+This file explains the Arduino code in simple language.
 
 The code file it explains is:
 
