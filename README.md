@@ -33,61 +33,21 @@ This repo has two parts:
 
 ---
 
-## Pseudocode first: what the project is trying to do
+## Før koden: hvad vi prøvede at lave
 
-Before reading the real code, it helps to describe the system like a plan.
-
-### Whole-system pseudocode
-
-```text
-START project
-  connect Arduino to computer over USB
-  upload motor-control sketch to Arduino
-  start localhost UI on computer
-
-  LOOP while project is running
-    user changes PWM or mode in browser
-    UI sends serial command to Arduino
-    Arduino reads command
-    Arduino updates motor output
-    sensor reports pulses back to Arduino
-    Arduino estimates current speed
-    Arduino sends status back to UI
-    UI updates graph and status text
-  END LOOP
-END project
-```
-
-### Arduino control-loop pseudocode
-
-```text
-SETUP
-  start serial communication
-  configure pins
-  enable motor driver
-  attach interrupt for pulse counting
-  start in manual mode with motor stopped
-
-REPEAT forever
-  read any new serial command
-  wait until next control interval
-  copy latest pulse data safely
-  estimate RPM from pulse timing and pulse count
-  smooth the RPM value
-
-  IF manual mode
-    use the human-chosen PWM value
-  ELSE
-    calculate PID output from target RPM and measured RPM
-  END IF
-
-  write PWM to motor
-  print current status back to computer
-END REPEAT
-```
-
-That is the real design in plain English.
-The actual `.ino` file is just the more exact version of that idea.
+Målet med projektet var at lave en motorstyring, som ikke kun virkede på papiret, men som vi faktisk kunne teste i virkeligheden.
+Vi ville kunne styre motoren fra computeren, ændre hastigheden hurtigt og samtidig se, hvad der skete.
+Derfor lavede vi både en Arduino-del og en lille lokal brugerflade.
+Arduinoen skulle styre selve motoren og læse signaler fra sensoren.
+Brugerfladen skulle gøre det nemmere at sende kommandoer og følge med uden at ændre kode hele tiden.
+Idéen var egentlig at gøre projektet mere overskueligt og mindre rodet at arbejde med.
+Vi startede med den simple del, nemlig manuel styring af PWM, fordi det var det mest stabile.
+Derefter prøvede vi at bygge videre med måling af RPM og PID-regulering.
+Det lød ret nice i teorien, men i praksis viste sensoren sig at være mere støjende end forventet.
+Så en stor del af arbejdet blev også at teste, fejlsøge og finde ud af, hvilke data man faktisk kunne stole på.
+På den måde blev projektet ikke kun "skriv noget kode og håb på det bedste".
+Det blev mere et rigtigt teknikprojekt, hvor hardware og software skulle spille sammen.
+Det vigtigste for os var derfor ikke bare at få motoren til at køre, men at forstå hvorfor den opførte sig, som den gjorde.
 
 ---
 
